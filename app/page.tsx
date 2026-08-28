@@ -36,7 +36,7 @@ export default function Home(){
     </section>
 
     <button className="add-button" onClick={()=>setOpen(true)} aria-label="新建日程">＋</button>
-    <nav className="bottom-nav" aria-label="主导航"><button><span>⌂</span>首页</button><button><span>＋</span>记录</button><button><span>✦</span>管家</button><button className="active"><span>▣</span>日程</button><button><span>○</span>我的</button></nav>
+    <nav className="bottom-nav" aria-label="主导航"><button className="active"><span>⌂</span>首页</button><button><span>＋</span>记录</button><button><span>✦</span>管家</button><button><span>▣</span>数据</button><button><span>○</span>我的</button></nav>
 
     {open&&<div className="overlay" role="dialog" aria-modal="true" onMouseDown={e=>e.currentTarget===e.target&&setOpen(false)}><form onSubmit={submit} className="sheet"><div className="handle"/><header><div><span>NEW SCHEDULE</span><h2>新建日程</h2></div><button type="button" onClick={()=>setOpen(false)}>×</button></header><label>日程名称<input required autoFocus name="title" placeholder="例如：准备周末徒步装备"/></label><div className="row"><label>日期<input value={`2026-08-${day}`} readOnly/></label><label>时间<input required name="time" type="time" defaultValue="10:00"/></label></div><label>提醒<select defaultValue="10"><option value="0">准时提醒</option><option value="10">提前 10 分钟</option><option value="30">提前 30 分钟</option></select></label><button className="save" type="submit">添加日程</button></form></div>}
     {toast&&<div className="toast">✓ {toast}</div>}

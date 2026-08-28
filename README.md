@@ -1,18 +1,22 @@
 # self-agent
 
-本机优先的个人管家原型：日程 + 多账户财务。数据默认只存浏览器 / 手机本机。
+本机优先个人管家：日程 + 多账户财务 + 待确认的支付识别 + 独立密码库。
 
-当前可运行文件：[`www/index.html`](www/index.html)
+## 网页前端
 
-## 现状
+底栏：首页 / 日程 / 记录 / 财务 / 我的。
 
-- 底栏：首页 / 日程 / 记录 / 财务 / 我的
-- 财务账户类型：资金、信贷、理财、储值、订阅、待收回、欠款、物品
-- 账户只在财务页内进入
-- 记录流：一句话 → 整理 → 确认后才保存
+- `/` 首页 `src/routes/index.tsx`
+- `/calendar` 日程 `src/routes/calendar.tsx`
+- `/record` 记录 `src/routes/record.tsx`
+- `/finance` 财务 `src/routes/finance.index.tsx`
+- `/finance/accounts` 账户 `src/routes/finance.accounts.tsx`
+- `/me` 我的 `src/routes/me.tsx`
+- `/vault` 密码库 `src/routes/vault.tsx`
+- `/add` 添加日程 `src/routes/add.tsx`
 
-浏览器直接打开 `www/index.html` 即可预览。
+账户只在财务里。支付识别先确认再入账。密码不进账本、不进对话。
 
-## 下一步
+## 安卓
 
-用 Capacitor 把 `www/` 包进安卓 WebView。自动记账与密码库见 [`docs/android-capture.md`](docs/android-capture.md)。
+见 `android/` 与 [docs/android-capture.md](docs/android-capture.md)。

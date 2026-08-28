@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 
-type Tab = 'home' | 'schedule' | 'capture' | 'finance' | 'profile' | 'health' | 'data' | 'butler' | 'privacy' | 'memory' | 'vault';
+type Tab = 'home' | 'schedule' | 'capture' | 'finance' | 'profile' | 'health' | 'travel' | 'data' | 'butler' | 'privacy' | 'memory' | 'vault';
 type ScheduleColor = 'blue' | 'green' | 'orange';
 type TransactionKind = 'expense' | 'income' | 'transfer';
 type Currency = 'CNY' | 'USD' | 'HKD' | 'EUR' | 'JPY';
@@ -24,7 +24,11 @@ type HealthRecord = { id: string; kind: 'sleep' | 'meal' | 'exercise'; value: nu
 type MemoryItem = { id: string; kind: '目标' | '偏好' | '观察'; title: string; note: string; active: boolean };
 type PrivacySettings = { health: boolean; finance: boolean; schedule: boolean };
 type VaultItem = { id: string; title: string; usernameHint: string; note: string };
-type AppData = { schedules: ScheduleItem[]; accounts: Account[]; transactions: Transaction[]; recurringRules: RecurringRule[]; healthRecords: HealthRecord[]; memories: MemoryItem[]; privacy: PrivacySettings; vaultItems: VaultItem[]; theme: 'light' | 'dark' };
+type TravelItem = { id: string; kind: 'train' | 'flight'; number: string; from: string; to: string; departAt: string; arriveAt: string; seat: string; terminal: string; status: 'upcoming' | 'completed' | 'changed'; source: 'manual' | 'calendar' | 'notification' | 'import'; verified: boolean };
+type InvestmentKind = 'fund' | 'stock' | 'crypto' | 'meme';
+type PricePoint = { date: string; price: number };
+type InvestmentHolding = { id: string; accountId: string; kind: InvestmentKind; name: string; code: string; contract: string; network: string; quantity: number; averageCost: number; currentPrice: number; currency: Currency; updatedAt: string; quoteStatus: 'sample' | 'manual' | 'live'; history: PricePoint[] };
+type AppData = { schedules: ScheduleItem[]; accounts: Account[]; transactions: Transaction[]; recurringRules: RecurringRule[]; healthRecords: HealthRecord[]; travels: TravelItem[]; investments: InvestmentHolding[]; memories: MemoryItem[]; privacy: PrivacySettings; vaultItems: VaultItem[]; theme: 'light' | 'dark' };
 type ExpenseDraft = { kind: 'expense'; amount: number; merchant: string; category: string; accountId: string; source: string; currency: Currency; reimbursable: boolean };
 type ScheduleDraft = { kind: 'schedule'; title: string; date: string; time: string };
 type CaptureDraft = ExpenseDraft | ScheduleDraft;
@@ -52,6 +56,8 @@ const seedData: AppData = {
     { id: 'alipay', name: '支付宝', type: '资金账户', balance: 830.2, currency: 'CNY', tone: 'ink' },
     { id: 'bank', name: '日常银行卡', type: '储蓄卡', balance: 12600, currency: 'CNY', tone: 'clay' },
     { id: 'credit', name: '信用卡', type: '待还款', balance: -2340, currency: 'CNY', tone: 'ink' },
+    { id: 'invest-cny', name: '人民币理财', type: '理财账户', balance: 4150, currency: 'CNY', tone: 'forest' },
+    { id: 'invest-usd', name: '海外投资', type: '理财账户', balance: 1131.5, currency: 'USD', tone: 'ink' },
   ],
   transactions: [
     { id: 't1', kind: 'expense', amount: 36, accountAmount: 36, currency: 'CNY', merchant: '午餐', category: '餐饮', accountId: 'wechat', source: '手动记录', reimbursable: true, createdAt: '2026-08-28T12:31:00+08:00' },
@@ -68,6 +74,15 @@ const seedData: AppData = {
     { id: 'h1', kind: 'sleep', value: 6.2, note: '昨晚睡眠', createdAt: '2026-08-28T07:10:00+08:00' },
     { id: 'h2', kind: 'exercise', value: 32, note: '快走', createdAt: '2026-08-27T19:20:00+08:00' },
     { id: 'h3', kind: 'meal', value: 2, note: '今日已记录餐数', createdAt: '2026-08-28T13:00:00+08:00' },
+  ],
+  travels: [
+    { id: 'travel-1', kind: 'train', number: 'G11', from: '北京南', to: '上海虹桥', departAt: '2026-08-30T09:00:00+08:00', arriveAt: '2026-08-30T13:28:00+08:00', seat: '06车 08A', terminal: '检票口待同步', status: 'upcoming', source: 'import', verified: false },
+    { id: 'travel-2', kind: 'flight', number: '示例航班 MU5101', from: '上海虹桥', to: '北京首都', departAt: '2026-09-03T08:20:00+08:00', arriveAt: '2026-09-03T10:40:00+08:00', seat: '座位待值机', terminal: 'T2', status: 'upcoming', source: 'import', verified: false },
+  ],
+  investments: [
+    { id: 'holding-1', accountId: 'invest-cny', kind: 'fund', name: '沪深300ETF（示例）', code: '510300.SH', contract: '', network: '', quantity: 1000, averageCost: 3.82, currentPrice: 4.15, currency: 'CNY', updatedAt: TODAY, quoteStatus: 'sample', history: [{ date: '08-22', price: 4.02 }, { date: '08-23', price: 4.08 }, { date: '08-24', price: 4.05 }, { date: '08-25', price: 4.11 }, { date: '08-26', price: 4.09 }, { date: '08-27', price: 4.13 }, { date: '08-28', price: 4.15 }] },
+    { id: 'holding-2', accountId: 'invest-usd', kind: 'stock', name: 'Apple（示例）', code: 'AAPL', contract: '', network: '', quantity: 5, averageCost: 186, currentPrice: 224.5, currency: 'USD', updatedAt: TODAY, quoteStatus: 'sample', history: [{ date: '08-22', price: 216 }, { date: '08-23', price: 219 }, { date: '08-24', price: 217.5 }, { date: '08-25', price: 221 }, { date: '08-26', price: 220.4 }, { date: '08-27', price: 222 }, { date: '08-28', price: 224.5 }] },
+    { id: 'holding-3', accountId: 'invest-usd', kind: 'meme', name: 'PEPE（示例）', code: 'PEPE', contract: '0x6982508145454Ce325dDbE47a25d4ec3d2311933', network: 'Ethereum', quantity: 1000000, averageCost: 0.0000082, currentPrice: 0.000009, currency: 'USD', updatedAt: TODAY, quoteStatus: 'sample', history: [{ date: '08-22', price: 0.0000081 }, { date: '08-23', price: 0.0000084 }, { date: '08-24', price: 0.0000083 }, { date: '08-25', price: 0.0000087 }, { date: '08-26', price: 0.0000085 }, { date: '08-27', price: 0.0000088 }, { date: '08-28', price: 0.000009 }] },
   ],
   memories: [
     { id: 'm1', kind: '目标', title: '每月结余至少 2,000 元', note: '用于生成财务提醒，不自动修改账户。', active: true },
@@ -93,8 +108,18 @@ function money(value: number) {
 }
 function currencyMark(currency: Currency) { return currency === 'CNY' ? '¥' : currency === 'USD' ? '$' : currency === 'HKD' ? 'HK$' : currency === 'EUR' ? '€' : 'JP¥'; }
 function uid(prefix: string) { return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`; }
+function investmentValue(item: InvestmentHolding) { return item.quantity * item.currentPrice; }
+function investmentProfit(item: InvestmentHolding) { return investmentValue(item) - item.quantity * item.averageCost; }
+function syncInvestmentBalances(accounts: Account[], investments: InvestmentHolding[]) {
+  const totals = new Map<string, number>();
+  investments.forEach((item) => totals.set(item.accountId, (totals.get(item.accountId) ?? 0) + investmentValue(item)));
+  return accounts.map((account) => totals.has(account.id) ? { ...account, balance: totals.get(account.id) ?? account.balance } : account);
+}
 function normalizeData(raw: Partial<AppData>): AppData {
-  const accounts = (raw.accounts ?? seedData.accounts).map((account) => ({ ...account, currency: account.currency ?? 'CNY' as Currency }));
+  const investments = raw.investments ?? seedData.investments;
+  const rawAccounts = raw.accounts ?? seedData.accounts;
+  const missingInvestmentAccounts = raw.investments === undefined ? seedData.accounts.filter((account) => investments.some((item) => item.accountId === account.id) && !rawAccounts.some((item) => item.id === account.id)) : [];
+  const accounts = syncInvestmentBalances([...rawAccounts, ...missingInvestmentAccounts].map((account) => ({ ...account, currency: account.currency ?? 'CNY' as Currency })), investments);
   return {
     schedules: raw.schedules ?? seedData.schedules,
     accounts,
@@ -106,6 +131,8 @@ function normalizeData(raw: Partial<AppData>): AppData {
     })),
     recurringRules: raw.recurringRules ?? seedData.recurringRules,
     healthRecords: raw.healthRecords ?? seedData.healthRecords,
+    travels: raw.travels ?? seedData.travels,
+    investments,
     memories: raw.memories ?? seedData.memories,
     privacy: raw.privacy ?? seedData.privacy,
     vaultItems: raw.vaultItems ?? seedData.vaultItems,
@@ -150,10 +177,13 @@ export default function Home() {
   const [hydrated, setHydrated] = useState(false);
   const [tab, setTab] = useState<Tab>('home');
   const [selectedDate, setSelectedDate] = useState(TODAY);
-  const [sheet, setSheet] = useState<'schedule' | 'transaction' | 'account' | 'recurring' | 'health' | null>(null);
+  const [sheet, setSheet] = useState<'schedule' | 'transaction' | 'account' | 'recurring' | 'health' | 'travel' | 'holding' | null>(null);
   const [financeCurrency, setFinanceCurrency] = useState<Currency>('CNY');
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
+  const [editingHoldingId, setEditingHoldingId] = useState<string | null>(null);
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [selectedHoldingId, setSelectedHoldingId] = useState<string | null>(null);
   const [toast, setToast] = useState('');
   const [captureText, setCaptureText] = useState('');
   const [draft, setDraft] = useState<CaptureDraft | null>(null);
@@ -165,6 +195,33 @@ export default function Home() {
       finally { setHydrated(true); }
     }, 0);
     return () => window.clearTimeout(timer);
+  }, []);
+  useEffect(() => {
+    function onTravel(event: Event) {
+      const items = (event as CustomEvent<TravelItem[]>).detail;
+      if (!Array.isArray(items) || !items.length) return;
+      setData((current) => ({ ...current, travels: items.map((item) => ({ ...item, verified: true })) }));
+      notify('已更新火车与航班行程');
+    }
+    function onMarket(event: Event) {
+      const quotes = (event as CustomEvent<{ code?: string; contract?: string; price: number; date?: string }[]>).detail;
+      if (!Array.isArray(quotes) || !quotes.length) return;
+      setData((current) => {
+        const investments = current.investments.map((item) => {
+          const quote = quotes.find((entry) => (entry.contract && entry.contract.toLowerCase() === item.contract.toLowerCase()) || (entry.code && entry.code.toUpperCase() === item.code.toUpperCase()));
+          if (!quote || !Number.isFinite(quote.price) || quote.price <= 0) return item;
+          const date = quote.date || TODAY;
+          const point = { date: date.slice(5), price: quote.price };
+          const history = [...item.history.filter((entry) => entry.date !== point.date), point].slice(-30);
+          return { ...item, currentPrice: quote.price, updatedAt: date, quoteStatus: 'live' as const, history };
+        });
+        return { ...current, investments, accounts: syncInvestmentBalances(current.accounts, investments) };
+      });
+      notify('今日行情与理财余额已更新');
+    }
+    window.addEventListener('self-agent:travel-updated', onTravel);
+    window.addEventListener('self-agent:market-quotes', onMarket);
+    return () => { window.removeEventListener('self-agent:travel-updated', onTravel); window.removeEventListener('self-agent:market-quotes', onMarket); };
   }, []);
   useEffect(() => { if (hydrated) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }, [data, hydrated]);
   useEffect(() => {
@@ -183,6 +240,7 @@ export default function Home() {
   const nextSchedule = data.schedules.find((item) => item.date === TODAY && !item.done);
   const editingAccount = editingAccountId ? data.accounts.find((item) => item.id === editingAccountId) : undefined;
   const editingTransaction = editingTransactionId ? data.transactions.find((item) => item.id === editingTransactionId) : undefined;
+  const editingHolding = editingHoldingId ? data.investments.find((item) => item.id === editingHoldingId) : undefined;
 
   function notify(message: string) { setToast(message); window.setTimeout(() => setToast(''), 2200); }
   function toggleSchedule(id: string) { setData((current) => ({ ...current, schedules: current.schedules.map((item) => item.id === id ? { ...item, done: !item.done } : item) })); }
@@ -213,7 +271,9 @@ export default function Home() {
     event.preventDefault(); const form = new FormData(event.currentTarget);
     const tones: Account['tone'][] = ['forest', 'clay', 'ink'];
     const previous = editingAccountId ? data.accounts.find((item) => item.id === editingAccountId) : undefined;
-    const account: Account = { id: previous?.id ?? uid('account'), name: String(form.get('name')), type: String(form.get('type')), balance: Number(form.get('balance') || 0), currency: String(form.get('currency')) as Currency, tone: previous?.tone ?? tones[data.accounts.length % tones.length] };
+    const currency = String(form.get('currency')) as Currency;
+    if (previous && data.investments.some((item) => item.accountId === previous.id && item.currency !== currency)) { notify('请先调整该账户内持仓币种'); return; }
+    const account: Account = { id: previous?.id ?? uid('account'), name: String(form.get('name')), type: String(form.get('type')), balance: Number(form.get('balance') || 0), currency, tone: previous?.tone ?? tones[data.accounts.length % tones.length] };
     setData((current) => ({ ...current, accounts: previous ? current.accounts.map((item) => item.id === previous.id ? account : item) : [...current.accounts, account] })); setEditingAccountId(null); setSheet(null); setFinanceCurrency(account.currency); notify(previous ? '账户资料和余额已更新' : '账户已添加');
   }
   function deleteTransaction() {
@@ -262,6 +322,42 @@ export default function Home() {
     const record: HealthRecord = { id: uid('health'), kind, value: Number(form.get('value')), note: String(form.get('note') || (kind === 'sleep' ? '睡眠' : kind === 'exercise' ? '运动' : '饮食')), createdAt: new Date().toISOString() };
     setData((current) => ({ ...current, healthRecords: [record, ...current.healthRecords] })); setSheet(null); notify('健康记录已保存到本机');
   }
+  function addTravel(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); const form = new FormData(event.currentTarget);
+    const item: TravelItem = { id: uid('travel'), kind: String(form.get('kind')) as TravelItem['kind'], number: String(form.get('number')), from: String(form.get('from')), to: String(form.get('to')), departAt: String(form.get('departAt')), arriveAt: String(form.get('arriveAt')), seat: String(form.get('seat') || '待分配'), terminal: String(form.get('terminal') || '待确认'), status: 'upcoming', source: 'manual', verified: true };
+    setData((current) => ({ ...current, travels: [...current.travels, item].sort((a, b) => a.departAt.localeCompare(b.departAt)) })); setSheet(null); notify('行程已保存到本机');
+  }
+  function requestTravelSync() {
+    window.dispatchEvent(new CustomEvent('self-agent:request-travel-sync'));
+    notify('已请求读取授权的通知、日历或行程邮件');
+  }
+  function addHolding(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); const form = new FormData(event.currentTarget);
+    const accountId = String(form.get('accountId'));
+    const account = data.accounts.find((item) => item.id === accountId);
+    const currentPrice = Number(form.get('currentPrice'));
+    if (!account) { notify('请选择有效的理财账户'); return; }
+    const previous = editingHoldingId ? data.investments.find((item) => item.id === editingHoldingId) : undefined;
+    const todayPoint = { date: TODAY.slice(5), price: currentPrice };
+    const holding: InvestmentHolding = { id: previous?.id ?? uid('holding'), accountId, kind: String(form.get('kind')) as InvestmentKind, name: String(form.get('name')), code: String(form.get('code')).trim().toUpperCase(), contract: String(form.get('contract')).trim(), network: String(form.get('network')).trim(), quantity: Number(form.get('quantity')), averageCost: Number(form.get('averageCost')), currentPrice, currency: account.currency, updatedAt: TODAY, quoteStatus: 'manual', history: previous ? [...previous.history.filter((item) => item.date !== todayPoint.date), todayPoint].slice(-30) : [todayPoint] };
+    if ((holding.kind === 'stock' || holding.kind === 'fund') && !holding.code) { notify('基金或股票需要填写代码'); return; }
+    if (holding.kind === 'meme' && !holding.contract) { notify('Meme 币需要填写合约地址'); return; }
+    setData((current) => {
+      const investments = previous ? current.investments.map((item) => item.id === previous.id ? holding : item) : [...current.investments, holding];
+      return { ...current, investments, accounts: syncInvestmentBalances(current.accounts, investments) };
+    });
+    setEditingHoldingId(null); setSheet(null); setSelectedAccountId(accountId); notify(previous ? '持仓与今日净值已更新' : '理财产品已添加');
+  }
+  function deleteHolding() {
+    const selected = editingHoldingId ? data.investments.find((item) => item.id === editingHoldingId) : undefined;
+    if (!selected || !window.confirm('确定删除这个理财产品吗？历史收益记录也会删除。')) return;
+    setData((current) => { const investments = current.investments.filter((item) => item.id !== selected.id); return { ...current, investments, accounts: syncInvestmentBalances(current.accounts, investments) }; });
+    setEditingHoldingId(null); setSelectedHoldingId(null); setSheet(null); notify('理财产品已删除');
+  }
+  function requestMarketRefresh() {
+    window.dispatchEvent(new CustomEvent('self-agent:request-market-refresh', { detail: data.investments.map(({ id, kind, code, contract, network }) => ({ id, kind, code, contract, network })) }));
+    notify('已请求行情服务更新；未连接时保留最近价格');
+  }
   function togglePrivacy(key: keyof PrivacySettings) { setData((current) => ({ ...current, privacy: { ...current.privacy, [key]: !current.privacy[key] } })); }
   function toggleMemory(id: string) { setData((current) => ({ ...current, memories: current.memories.map((item) => item.id === id ? { ...item, active: !item.active } : item) })); }
   function deleteMemory(id: string) { if (window.confirm('确定删除这条管家记忆吗？')) setData((current) => ({ ...current, memories: current.memories.filter((item) => item.id !== id) })); }
@@ -274,16 +370,16 @@ export default function Home() {
     if (!window.confirm('确定恢复示例数据吗？本机新增的日程和账目会被清除。')) return;
     setData(seedData); window.localStorage.removeItem(STORAGE_KEY); notify('已恢复示例数据');
   }
-  function pageTitle() { return tab === 'schedule' ? '日程与行动' : tab === 'capture' ? '快速记录' : tab === 'finance' ? '我的财务' : tab === 'profile' ? '我的' : tab === 'health' ? '健康记录' : tab === 'data' ? '数据中心' : tab === 'butler' ? '本机管家' : tab === 'privacy' ? '隐私与权限' : tab === 'memory' ? '记忆管理' : tab === 'vault' ? '密码库' : '今天'; }
+  function pageTitle() { return tab === 'schedule' ? '日程与行动' : tab === 'capture' ? '快速记录' : tab === 'finance' ? selectedHoldingId ? '收益详情' : selectedAccountId ? '账户账单' : '我的财务' : tab === 'profile' ? '我的' : tab === 'health' ? '健康记录' : tab === 'travel' ? '我的出行' : tab === 'data' ? '数据中心' : tab === 'butler' ? '本机管家' : tab === 'privacy' ? '隐私与权限' : tab === 'memory' ? '记忆管理' : tab === 'vault' ? '密码库' : '今天'; }
 
   return <main className={`phone-app ${data.theme === 'dark' ? 'dark' : ''}`}>
-    <header className="app-header"><button className="round" aria-label="返回首页" onClick={() => setTab('home')}>‹</button><div><span>SELF AGENT · 本机优先</span><h1>{pageTitle()}</h1></div><button className="round status-dot" aria-label="本机保存状态"><i />•••</button></header>
+    <header className="app-header"><button className="round" aria-label="返回" onClick={() => { if (tab === 'finance' && selectedHoldingId) setSelectedHoldingId(null); else if (tab === 'finance' && selectedAccountId) setSelectedAccountId(null); else setTab('home'); }}>‹</button><div><span>SELF AGENT · 本机优先</span><h1>{pageTitle()}</h1></div><button className="round status-dot" aria-label="本机保存状态"><i />•••</button></header>
 
     {tab === 'home' && <div className="page home-page">
       <section className="hero-card"><span>8月28日 · 星期五</span><h2>早上好，今天慢慢来。</h2><p>所有内容先整理、确认后再保存。</p></section>
       <section className="summary-grid"><button onClick={() => setTab('schedule')}><span>下一项 · {nextSchedule?.time ?? '空闲'}</span><strong>{nextSchedule?.title ?? '今天没有更多日程'}</strong><small>{data.schedules.filter((item) => item.date === TODAY && item.done).length}/{data.schedules.filter((item) => item.date === TODAY).length} 已完成</small></button><button onClick={() => setTab('finance')}><span>今日支出</span><strong>¥ {money(todaySpend)}</strong><small>净资产 ¥ {money(totalBalance)}</small></button></section>
       <section className="section-block"><div className="section-title"><div><span>QUICK CAPTURE</span><h2>一句话交给管家</h2></div></div><button className="capture-callout" onClick={() => setTab('capture')}><span>＋</span><div><strong>记录一件事</strong><small>例如“午饭 36 元，微信支付”</small></div><b>›</b></button></section>
-      <section className="section-block"><div className="section-title"><div><span>FEATURES</span><h2>生活工具</h2></div></div><div className="feature-grid"><button onClick={() => setTab('health')}><span>健</span><strong>健康</strong><small>睡眠与运动</small></button><button onClick={() => setTab('butler')}><span>管</span><strong>管家</strong><small>本机摘要问答</small></button><button onClick={() => setTab('data')}><span>数</span><strong>数据</strong><small>统一趋势</small></button><button onClick={() => setTab('vault')}><span>钥</span><strong>密码库</strong><small>安全元数据</small></button></div></section>
+      <section className="section-block"><div className="section-title"><div><span>FEATURES</span><h2>生活工具</h2></div></div><div className="feature-grid"><button onClick={() => setTab('travel')}><span>行</span><strong>出行</strong><small>火车与航班</small></button><button onClick={() => setTab('health')}><span>健</span><strong>健康</strong><small>睡眠与运动</small></button><button onClick={() => setTab('butler')}><span>管</span><strong>管家</strong><small>本机摘要问答</small></button><button onClick={() => setTab('data')}><span>数</span><strong>数据</strong><small>统一趋势</small></button><button onClick={() => setTab('vault')}><span>钥</span><strong>密码库</strong><small>安全元数据</small></button></div></section>
       <section className="section-block"><div className="section-title"><div><span>RECENT</span><h2>最近入账</h2></div><button onClick={() => setTab('finance')}>查看全部</button></div><TransactionList items={data.transactions.slice(0, 3)} accounts={data.accounts} /></section>
     </div>}
 
@@ -291,11 +387,12 @@ export default function Home() {
 
     {tab === 'capture' && <div className="page capture-page"><section className="capture-intro"><span>INBOX</span><h2>先说下来，我来整理。</h2><p>识别为日程或账目后，你确认才会保存。</p></section><form className="capture-box" onSubmit={organizeCapture}><textarea aria-label="一句话记录" maxLength={120} value={captureText} onChange={(event) => setCaptureText(event.target.value)} placeholder={'例如：明天 9 点提醒我交水电费\n或者：午饭 36 元，微信支付'} /><div><small>{captureText.length}/120</small><button type="submit">整理一下</button></div></form><div className="suggestion-row"><button onClick={() => setCaptureText('午饭 36 元，微信支付')}>午饭 36 元</button><button onClick={() => setCaptureText('明天 9 点提醒我交水电费')}>明天 9 点提醒</button></div>{draft && <section className="draft-card"><header><div><span>待确认 · {draft.kind === 'expense' ? '支出' : '日程'}</span><h3>我整理成这样</h3></div><button aria-label="取消草稿" onClick={() => setDraft(null)}>×</button></header>{draft.kind === 'expense' ? <><div className="draft-fields"><label>金额<input inputMode="decimal" value={draft.amount || ''} onChange={(event) => setDraft({ ...draft, amount: Number(event.target.value) })} /></label><label>币种<select value={draft.currency} onChange={(event) => setDraft({ ...draft, currency: event.target.value as Currency })}>{currencies.map((currency) => <option key={currency}>{currency}</option>)}</select></label><label>商家 / 用途<input value={draft.merchant} onChange={(event) => setDraft({ ...draft, merchant: event.target.value })} /></label><label>分类<select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })}><option>餐饮</option><option>交通</option><option>生活</option><option>医疗</option><option>其他</option></select></label><label>账户<select value={draft.accountId} onChange={(event) => setDraft({ ...draft, accountId: event.target.value })}>{data.accounts.map((account) => <option key={account.id} value={account.id}>{account.name} · {account.currency}</option>)}</select></label></div><label className="check-option"><input type="checkbox" checked={draft.reimbursable} onChange={(event) => setDraft({ ...draft, reimbursable: event.target.checked })} />加入待报销</label></> : <div className="draft-fields"><label>日程名称<input value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} /></label><label>日期<input type="date" value={draft.date} onChange={(event) => setDraft({ ...draft, date: event.target.value })} /></label><label>时间<input type="time" value={draft.time} onChange={(event) => setDraft({ ...draft, time: event.target.value })} /></label></div>}<button className="confirm-button" onClick={confirmDraft}>确认保存</button></section>}</div>}
 
-    {tab === 'finance' && <FinancePanel data={data} currency={financeCurrency} onCurrency={setFinanceCurrency} onNewTransaction={() => { setEditingTransactionId(null); setSheet('transaction'); }} onEditTransaction={(id) => { setEditingTransactionId(id); setSheet('transaction'); }} onNewAccount={() => { setEditingAccountId(null); setSheet('account'); }} onEditAccount={(id) => { setEditingAccountId(id); setSheet('account'); }} onNewRecurring={() => setSheet('recurring')} onRunRecurring={runRecurringRule} onToggleRecurring={toggleRecurringRule} />}
+    {tab === 'finance' && <FinancePanel data={data} currency={financeCurrency} selectedAccountId={selectedAccountId} selectedHoldingId={selectedHoldingId} onCurrency={setFinanceCurrency} onSelectAccount={(id) => { setSelectedAccountId(id); setSelectedHoldingId(null); }} onSelectHolding={setSelectedHoldingId} onBackAccount={() => setSelectedAccountId(null)} onBackHolding={() => setSelectedHoldingId(null)} onNewTransaction={() => { setEditingTransactionId(null); setSheet('transaction'); }} onEditTransaction={(id) => { setEditingTransactionId(id); setSheet('transaction'); }} onNewAccount={() => { setEditingAccountId(null); setSheet('account'); }} onEditAccount={(id) => { setEditingAccountId(id); setSheet('account'); }} onNewHolding={() => { setEditingHoldingId(null); setSheet('holding'); }} onEditHolding={(id) => { setEditingHoldingId(id); setSheet('holding'); }} onRefreshMarket={requestMarketRefresh} onNewRecurring={() => setSheet('recurring')} onRunRecurring={runRecurringRule} onToggleRecurring={toggleRecurringRule} />}
 
     {tab === 'profile' && <div className="page profile-page"><section className="profile-heading"><div>SA</div><span>SELF AGENT</span><h2>数据留在你的设备上</h2><p>网页端保存生活记录；敏感系统能力由 Android 版主动授权。</p></section><section className="profile-menu"><button onClick={() => setTab('memory')}><span>忆</span><div><strong>AI 记忆管理</strong><small>查看、暂停或删除管家记忆</small></div><b>›</b></button><button onClick={() => setTab('privacy')}><span>盾</span><div><strong>隐私与权限</strong><small>分别控制健康、财务和日程摘要</small></div><b>›</b></button><button onClick={() => setTab('vault')}><span>钥</span><div><strong>密码库</strong><small>不在网页保存密码明文</small></div><b>›</b></button><button onClick={() => setTab('data')}><span>数</span><div><strong>数据中心</strong><small>健康、财务与行动统一摘要</small></div><b>›</b></button></section><section className="profile-actions"><button onClick={toggleTheme}>{data.theme === 'dark' ? '切换浅色模式' : '切换深色模式'}</button><button onClick={exportLocalData}>导出脱敏数据</button><button onClick={clearLocalData}>恢复示例数据</button></section><p className="privacy-note">支付通知和 Autofill 仍等待 Android 原生模块接入；网页不会伪装成已获得系统权限。</p></div>}
 
     {tab === 'health' && <HealthPanel records={data.healthRecords} onAdd={() => setSheet('health')} />}
+    {tab === 'travel' && <TravelPanel items={data.travels} onSync={requestTravelSync} onAdd={() => setSheet('travel')} />}
     {tab === 'data' && <DataPanel data={data} />}
     {tab === 'butler' && <ButlerPanel data={data} />}
     {tab === 'privacy' && <PrivacyPanel settings={data.privacy} onToggle={togglePrivacy} />}
@@ -310,6 +407,8 @@ export default function Home() {
     {sheet === 'account' && <div className="overlay" role="dialog" aria-modal="true" onMouseDown={(event) => event.currentTarget === event.target && setSheet(null)}><form key={editingAccount?.id ?? 'new-account'} onSubmit={addAccount} className="sheet"><div className="handle" /><header><div><span>{editingAccount ? 'EDIT ACCOUNT' : 'NEW ACCOUNT'}</span><h2>{editingAccount ? '编辑账户' : '添加自定义账户'}</h2></div><button type="button" onClick={() => setSheet(null)}>×</button></header><label>账户名称<input required autoFocus name="name" placeholder="例如：港币旅行卡" defaultValue={editingAccount?.name} /></label><div className="row"><label>账户类型<select name="type" defaultValue={editingAccount?.type}><option>资金账户</option><option>储蓄卡</option><option>信用卡</option><option>理财账户</option><option>储值账户</option><option>订阅账户</option><option>待收回</option><option>欠款</option><option>报销账户</option><option>物品资产</option><option>现金</option></select></label><label>币种<select name="currency" defaultValue={editingAccount?.currency}>{currencies.map((currency) => <option key={currency}>{currency}</option>)}</select></label></div><label>当前余额<input name="balance" type="number" step="0.01" defaultValue={editingAccount?.balance ?? 0} /></label><small className="form-tip">可直接调整余额，用于校准实际账户金额。</small><button className="save" type="submit">{editingAccount ? '保存修改' : '保存账户'}</button></form></div>}
     {sheet === 'recurring' && <div className="overlay" role="dialog" aria-modal="true" onMouseDown={(event) => event.currentTarget === event.target && setSheet(null)}><form onSubmit={addRecurringRule} className="sheet scroll-sheet"><div className="handle" /><header><div><span>AUTO PAYMENT</span><h2>添加自动扣款</h2></div><button type="button" onClick={() => setSheet(null)}>×</button></header><div className="row"><label>规则类型<select name="ruleKind"><option value="subscription">订阅扣款</option><option value="credit-card">信用卡还款</option></select></label><label>每月扣款日<input name="dueDay" type="number" min="1" max="31" defaultValue="1" /></label></div><label>名称<input required name="name" placeholder="例如：视频会员" /></label><div className="row"><label>金额<input required name="amount" type="number" min="0.01" step="0.01" /></label><label>币种<select name="currency">{currencies.map((currency) => <option key={currency}>{currency}</option>)}</select></label></div><label>扣款账户<select name="accountId">{data.accounts.map((account) => <option key={account.id} value={account.id}>{account.name} · {account.currency}</option>)}</select></label><label>还款目标账户（订阅可忽略）<select name="targetAccountId">{data.accounts.map((account) => <option key={account.id} value={account.id}>{account.name} · {account.currency}</option>)}</select></label><button className="save" type="submit">保存扣款规则</button></form></div>}
     {sheet === 'health' && <div className="overlay" role="dialog" aria-modal="true" onMouseDown={(event) => event.currentTarget === event.target && setSheet(null)}><form onSubmit={addHealthRecord} className="sheet"><div className="handle" /><header><div><span>HEALTH RECORD</span><h2>添加健康记录</h2></div><button type="button" onClick={() => setSheet(null)}>×</button></header><div className="row"><label>记录类型<select name="kind"><option value="sleep">睡眠小时</option><option value="exercise">运动分钟</option><option value="meal">饮食餐数</option></select></label><label>数值<input required name="value" type="number" min="0" step="0.1" /></label></div><label>备注<input name="note" placeholder="例如：昨晚睡眠、快走" /></label><button className="save" type="submit">保存记录</button></form></div>}
+    {sheet === 'travel' && <div className="overlay" role="dialog" aria-modal="true" onMouseDown={(event) => event.currentTarget === event.target && setSheet(null)}><form onSubmit={addTravel} className="sheet scroll-sheet"><div className="handle" /><header><div><span>NEW TRIP</span><h2>手动添加行程</h2></div><button type="button" onClick={() => setSheet(null)}>×</button></header><div className="row"><label>类型<select name="kind"><option value="train">火车</option><option value="flight">航班</option></select></label><label>车次 / 航班号<input required name="number" placeholder="例如：G11" /></label></div><div className="row"><label>出发地<input required name="from" /></label><label>目的地<input required name="to" /></label></div><label>出发时间<input required name="departAt" type="datetime-local" /></label><label>到达时间<input required name="arriveAt" type="datetime-local" /></label><div className="row"><label>座位<input name="seat" placeholder="06车 08A" /></label><label>航站楼 / 检票口<input name="terminal" placeholder="T2 / 12A" /></label></div><button className="save" type="submit">保存行程</button></form></div>}
+    {sheet === 'holding' && <div className="overlay" role="dialog" aria-modal="true" onMouseDown={(event) => event.currentTarget === event.target && setSheet(null)}><form key={editingHolding?.id ?? 'new-holding'} onSubmit={addHolding} className="sheet scroll-sheet"><div className="handle" /><header><div><span>{editingHolding ? 'EDIT ASSET' : 'NEW ASSET'}</span><h2>{editingHolding ? '更新理财产品' : '添加理财产品'}</h2></div><button type="button" onClick={() => setSheet(null)}>×</button></header><div className="row"><label>产品类型<select name="kind" defaultValue={editingHolding?.kind ?? 'fund'}><option value="fund">基金 / ETF</option><option value="stock">股票</option><option value="crypto">虚拟货币</option><option value="meme">Meme 币</option></select></label><label>所属账户<select name="accountId" defaultValue={editingHolding?.accountId ?? selectedAccountId ?? undefined}>{data.accounts.filter((account) => account.type === '理财账户').map((account) => <option key={account.id} value={account.id}>{account.name} · {account.currency}</option>)}</select></label></div><label>产品名称<input required name="name" placeholder="例如：标普500 ETF" defaultValue={editingHolding?.name} /></label><label>基金 / 股票 / 币种代码<input name="code" placeholder="例如：510300.SH、AAPL、BTC" defaultValue={editingHolding?.code} /></label><div className="row"><label>网络<select name="network" defaultValue={editingHolding?.network}><option value="">非链上产品</option><option>Ethereum</option><option>Solana</option><option>BNB Chain</option><option>Base</option><option>Arbitrum</option><option>Polygon</option></select></label><label>合约地址<input name="contract" placeholder="Meme 币必填" defaultValue={editingHolding?.contract} /></label></div><div className="row"><label>持有数量<input required name="quantity" type="number" min="0" step="any" defaultValue={editingHolding?.quantity} /></label><label>平均成本<input required name="averageCost" type="number" min="0" step="any" defaultValue={editingHolding?.averageCost} /></label></div><label>当前价格 / 今日净值<input required name="currentPrice" type="number" min="0" step="any" defaultValue={editingHolding?.currentPrice} /></label><small className="form-tip">保存会形成今日收益点。连接行情服务后，App 可按代码或“网络 + 合约”每日自动更新。</small><button className="save" type="submit">{editingHolding ? '保存今日更新' : '添加产品'}</button>{editingHolding && <button className="danger-button" type="button" onClick={deleteHolding}>删除这个产品</button>}</form></div>}
     {toast && <div className="toast">✓ {toast}</div>}
   </main>;
 }
@@ -319,6 +418,18 @@ function HealthPanel({ records, onAdd }: { records: HealthRecord[]; onAdd: () =>
   const exercise = records.filter((item) => item.kind === 'exercise').reduce((sum, item) => sum + item.value, 0);
   const meals = records.find((item) => item.kind === 'meal');
   return <div className="page feature-page"><section className="health-hero"><span>今日身体状态</span><strong>{sleep && sleep.value >= 7 ? 86 : 78}</strong><div><h2>{sleep && sleep.value >= 7 ? '状态良好' : '睡眠稍低，其他平稳'}</h2><p>只与个人记录比较，不作医疗诊断。</p></div></section><section className="feature-section"><div className="feature-title"><div><span>HEALTH</span><h2>健康项目</h2></div><button onClick={onAdd}>＋ 添加</button></div><div className="health-grid"><article><span>睡</span><div><strong>睡眠</strong><small>最近一次</small></div><b>{sleep ? `${sleep.value} 小时` : '待记录'}</b></article><article><span>动</span><div><strong>运动</strong><small>本机记录累计</small></div><b>{exercise} 分钟</b></article><article><span>食</span><div><strong>饮食</strong><small>今日餐数</small></div><b>{meals ? `${meals.value} 餐` : '待补充'}</b></article></div></section><section className="feature-section"><div className="feature-title"><div><span>HISTORY</span><h2>最近记录</h2></div></div><div className="plain-list">{records.map((item) => <article key={item.id}><span>{item.kind === 'sleep' ? '睡' : item.kind === 'exercise' ? '动' : '食'}</span><div><strong>{item.note}</strong><small>{item.kind === 'sleep' ? `${item.value} 小时` : item.kind === 'exercise' ? `${item.value} 分钟` : `${item.value} 餐`}</small></div></article>)}</div></section></div>;
+}
+
+function TravelPanel({ items, onSync, onAdd }: { items: TravelItem[]; onSync: () => void; onAdd: () => void }) {
+  const sorted = [...items].sort((a, b) => a.departAt.localeCompare(b.departAt));
+  const next = sorted.find((item) => item.status !== 'completed');
+  function time(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? value.replace('T', ' ') : new Intl.DateTimeFormat('zh-CN', { month: 'numeric', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit' }).format(date); }
+  return <div className="page feature-page travel-page">
+    <section className="travel-hero"><div><span>NEXT TRIP</span><h2>{next ? `${next.from} → ${next.to}` : '暂无后续行程'}</h2><p>{next ? `${next.number} · ${time(next.departAt)}` : '可以从授权来源读取，或手动添加。'}</p></div><b>{next?.kind === 'flight' ? '航' : '铁'}</b></section>
+    <section className="travel-actions"><button onClick={onSync}><span>↻</span><div><strong>读取我的行程</strong><small>授权后读取日历、通知或导入内容</small></div></button><button onClick={onAdd}><span>＋</span><div><strong>手动添加</strong><small>补充车次、航班和座位</small></div></button></section>
+    <section className="feature-section"><div className="feature-title"><div><span>ITINERARY</span><h2>火车与航班</h2></div><small>{sorted.length} 段</small></div><div className="trip-list">{sorted.map((item) => <article key={item.id} className={item.status}><header><span>{item.kind === 'flight' ? '航班' : '火车'} · {item.number}</span><b>{item.verified ? '已核验' : '示例/待核验'}</b></header><div className="trip-route"><div><strong>{item.from}</strong><small>{time(item.departAt)}</small></div><i>→</i><div><strong>{item.to}</strong><small>{time(item.arriveAt)}</small></div></div><footer><span>{item.seat}</span><span>{item.terminal}</span><span>{item.source === 'manual' ? '手动' : item.source === 'notification' ? '通知' : item.source === 'calendar' ? '日历' : '导入'}</span></footer></article>)}</div></section>
+    <p className="travel-note">网页不会假装已经读取你的订单。打包成 App 后，需要你授权日历/通知或主动导入票据；行程变更仍以承运方通知为准。</p>
+  </div>;
 }
 
 function DataPanel({ data }: { data: AppData }) {
@@ -366,7 +477,19 @@ function VaultPanel({ items }: { items: VaultItem[] }) {
   return <div className="page feature-page"><section className="vault-safe"><span>钥</span><h2>安全密码库入口</h2><p>网页只保存“账号是否存在”等非敏感元数据，不保存密码明文。</p><b>等待 Android Autofill + Keystore</b></section><section className="feature-section"><div className="feature-title"><div><span>METADATA</span><h2>账号目录</h2></div><small>{items.length} 项</small></div><div className="plain-list">{items.map((item) => <article key={item.id}><span>{item.title.slice(0, 1)}</span><div><strong>{item.title}</strong><small>{item.usernameHint} · {item.note}</small></div></article>)}</div></section><section className="vault-warning"><strong>为什么不能现在查看密码？</strong><p>浏览器本地存储不适合保存密码。正式版本必须通过系统 Autofill、Keystore 和生物识别完成。</p></section></div>;
 }
 
-function FinancePanel({ data, currency, onCurrency, onNewTransaction, onEditTransaction, onNewAccount, onEditAccount, onNewRecurring, onRunRecurring, onToggleRecurring }: { data: AppData; currency: Currency; onCurrency: (currency: Currency) => void; onNewTransaction: () => void; onEditTransaction: (id: string) => void; onNewAccount: () => void; onEditAccount: (id: string) => void; onNewRecurring: () => void; onRunRecurring: (id: string) => void; onToggleRecurring: (id: string) => void }) {
+type FinancePanelProps = { data: AppData; currency: Currency; selectedAccountId: string | null; selectedHoldingId: string | null; onCurrency: (currency: Currency) => void; onSelectAccount: (id: string) => void; onSelectHolding: (id: string) => void; onBackAccount: () => void; onBackHolding: () => void; onNewTransaction: () => void; onEditTransaction: (id: string) => void; onNewAccount: () => void; onEditAccount: (id: string) => void; onNewHolding: () => void; onEditHolding: (id: string) => void; onRefreshMarket: () => void; onNewRecurring: () => void; onRunRecurring: (id: string) => void; onToggleRecurring: (id: string) => void };
+
+function FinancePanel({ data, currency, selectedAccountId, selectedHoldingId, onCurrency, onSelectAccount, onSelectHolding, onBackAccount, onBackHolding, onNewTransaction, onEditTransaction, onNewAccount, onEditAccount, onNewHolding, onEditHolding, onRefreshMarket, onNewRecurring, onRunRecurring, onToggleRecurring }: FinancePanelProps) {
+  const selectedHolding = selectedHoldingId ? data.investments.find((item) => item.id === selectedHoldingId) : undefined;
+  if (selectedHolding) return <HoldingDetail holding={selectedHolding} account={data.accounts.find((item) => item.id === selectedHolding.accountId)} onBack={onBackHolding} onEdit={() => onEditHolding(selectedHolding.id)} />;
+  const selectedAccount = selectedAccountId ? data.accounts.find((item) => item.id === selectedAccountId) : undefined;
+  if (selectedAccount) {
+    const accountItems = data.transactions.filter((item) => item.accountId === selectedAccount.id || item.targetAccountId === selectedAccount.id);
+    const accountHoldings = data.investments.filter((item) => item.accountId === selectedAccount.id);
+    const income = accountItems.filter((item) => item.kind === 'income' && item.accountId === selectedAccount.id).reduce((sum, item) => sum + item.accountAmount, 0);
+    const expense = accountItems.filter((item) => item.kind === 'expense' && item.accountId === selectedAccount.id).reduce((sum, item) => sum + item.accountAmount, 0);
+    return <div className="page finance-page account-detail-page"><button className="inline-back" onClick={onBackAccount}>‹ 返回全部账户</button><section className={`account-hero ${selectedAccount.tone}`}><span>{selectedAccount.type} · {selectedAccount.currency}</span><h2>{selectedAccount.name}</h2><strong>{selectedAccount.balance < 0 ? '−' : ''}{currencyMark(selectedAccount.currency)} {money(Math.abs(selectedAccount.balance))}</strong><button onClick={() => onEditAccount(selectedAccount.id)}>编辑账户与余额</button></section><section className="account-stats"><article><span>流入</span><strong>+{currencyMark(selectedAccount.currency)}{money(income)}</strong></article><article><span>流出</span><strong>−{currencyMark(selectedAccount.currency)}{money(expense)}</strong></article><article><span>账目</span><strong>{accountItems.length} 笔</strong></article></section>{selectedAccount.type === '理财账户' && <section className="section-block"><div className="section-title"><div><span>HOLDINGS</span><h2>该账户持仓</h2></div><button onClick={onNewHolding}>＋ 添加产品</button></div><InvestmentList items={accountHoldings} onSelect={onSelectHolding} /></section>}<section className="section-block"><div className="section-title"><div><span>ACCOUNT LEDGER</span><h2>该账户全部账单</h2></div><button onClick={onNewTransaction}>＋ 记一笔</button></div><TransactionList items={accountItems} accounts={data.accounts} onEdit={onEditTransaction} /></section></div>;
+  }
   const monthItems = data.transactions.filter((item) => item.currency === currency && item.createdAt.startsWith(MONTH));
   const monthIncome = monthItems.filter((item) => item.kind === 'income').reduce((sum, item) => sum + item.amount, 0);
   const monthExpense = monthItems.filter((item) => item.kind === 'expense').reduce((sum, item) => sum + item.amount, 0);
@@ -380,10 +503,29 @@ function FinancePanel({ data, currency, onCurrency, onNewTransaction, onEditTran
     <section className="monthly-summary"><article><span>本月收入</span><strong className="income">+{mark}{money(monthIncome)}</strong></article><article><span>本月支出</span><strong>−{mark}{money(monthExpense)}</strong></article><article><span>本月结余</span><strong className={monthIncome - monthExpense >= 0 ? 'income' : ''}>{monthIncome - monthExpense >= 0 ? '+' : '−'}{mark}{money(Math.abs(monthIncome - monthExpense))}</strong></article></section>
     <section className="daily-card"><header><div><span>DAILY SPEND</span><h3>每日支出</h3></div><div><small>今天</small><strong>{mark}{money(todayExpense)}</strong></div></header><div className="spend-chart">{chartDays.map((item) => <div key={item.day}><span><i style={{ height: `${Math.max(5, item.amount / maxDay * 100)}%` }} /></span><small>{item.day}日</small></div>)}</div><footer><span>待报销</span><strong>{mark}{money(reimburse)}</strong></footer></section>
     <button className="bookkeeping-button" onClick={onNewTransaction}><span>＋</span><div><strong>记一笔</strong><small>选择账户、币种与报销状态</small></div><b>›</b></button>
-    <section className="section-block account-section"><div className="section-title"><div><span>ACCOUNTS</span><h2>我的账户</h2></div><button onClick={onNewAccount}>＋ 添加账户</button></div><div className="account-grid">{data.accounts.map((account) => <article className={account.tone} key={account.id}><span>{account.type} · {account.currency}</span><button className="account-edit-button" onClick={() => onEditAccount(account.id)}>编辑</button><h3>{account.name}</h3><strong>{account.balance < 0 ? '−' : ''}{currencyMark(account.currency)} {money(Math.abs(account.balance))}</strong></article>)}</div></section>
+    <section className="section-block account-section"><div className="section-title"><div><span>ACCOUNTS</span><h2>我的账户</h2></div><button onClick={onNewAccount}>＋ 添加账户</button></div><div className="account-grid">{data.accounts.map((account) => <article className={account.tone} key={account.id} role="button" tabIndex={0} onClick={() => onSelectAccount(account.id)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') onSelectAccount(account.id); }}><span>{account.type} · {account.currency}</span><button className="account-edit-button" onClick={(event) => { event.stopPropagation(); onEditAccount(account.id); }}>编辑</button><h3>{account.name}</h3><strong>{account.balance < 0 ? '−' : ''}{currencyMark(account.currency)} {money(Math.abs(account.balance))}</strong><small className="account-open-hint">查看账单 ›</small></article>)}</div></section>
+    <section className="section-block investment-section"><div className="section-title"><div><span>INVESTMENTS · {currency}</span><h2>理财与投资</h2></div><button onClick={onNewHolding}>＋ 添加产品</button></div><div className="investment-toolbar"><span>按代码或网络 + 合约更新余额</span><button onClick={onRefreshMarket}>更新今日行情</button></div><InvestmentList items={data.investments.filter((item) => item.currency === currency)} onSelect={onSelectHolding} /><p className="automation-note">“示例”价格只用于演示计算。连接服务端行情源后，App 每日写入一个价格点并同步理财账户余额。</p></section>
     <section className="section-block"><div className="section-title"><div><span>AUTO PAYMENT</span><h2>自动扣款</h2></div><button onClick={onNewRecurring}>＋ 新规则</button></div><div className="recurring-list">{data.recurringRules.map((rule) => { const future = rule.dueDay > Number(TODAY.slice(-2)); return <article key={rule.id} className={!rule.enabled ? 'disabled' : ''}><span className="rule-icon">{rule.kind === 'subscription' ? '订' : '还'}</span><div><strong>{rule.name}</strong><small>每月 {rule.dueDay} 日 · {data.accounts.find((account) => account.id === rule.accountId)?.name}</small></div><b>{currencyMark(rule.currency)}{money(rule.amount)}</b><button disabled={!rule.enabled || rule.lastRunPeriod === MONTH || future} onClick={() => onRunRecurring(rule.id)}>{rule.lastRunPeriod === MONTH ? '本月已完成' : !rule.enabled ? '已暂停' : future ? `${rule.dueDay}日到期` : '确认扣款'}</button><button className="rule-toggle" onClick={() => onToggleRecurring(rule.id)}>{rule.enabled ? '暂停' : '启用'}</button></article>; })}</div><p className="automation-note">到期后生成待确认项目；确认才会扣减账户。Android 版可通过本机通知提醒。</p></section>
     <section className="section-block"><div className="section-title"><div><span>LEDGER · {currency}</span><h2>本月流水</h2></div></div><TransactionList items={monthItems} accounts={data.accounts} onEdit={onEditTransaction} /></section>
   </div>;
+}
+
+function InvestmentList({ items, onSelect }: { items: InvestmentHolding[]; onSelect: (id: string) => void }) {
+  if (!items.length) return <div className="list-empty">该币种还没有理财产品</div>;
+  return <div className="investment-list">{items.map((item) => { const profit = investmentProfit(item); const rate = item.averageCost > 0 ? profit / (item.quantity * item.averageCost) * 100 : 0; return <button key={item.id} onClick={() => onSelect(item.id)}><span className={`asset-kind ${item.kind}`}>{item.kind === 'fund' ? '基' : item.kind === 'stock' ? '股' : item.kind === 'meme' ? 'M' : '币'}</span><div><strong>{item.name}</strong><small>{item.code || `${item.network} · ${item.contract.slice(0, 8)}…`} · {item.quoteStatus === 'live' ? '实时源' : item.quoteStatus === 'manual' ? '手动更新' : '示例'}</small></div><div><b>{currencyMark(item.currency)}{money(investmentValue(item))}</b><em className={profit >= 0 ? 'positive' : 'negative'}>{profit >= 0 ? '+' : '−'}{currencyMark(item.currency)}{money(Math.abs(profit))} · {rate.toFixed(2)}%</em></div><i>›</i></button>; })}</div>;
+}
+
+function HoldingDetail({ holding, account, onBack, onEdit }: { holding: InvestmentHolding; account?: Account; onBack: () => void; onEdit: () => void }) {
+  const profit = investmentProfit(holding);
+  const cost = holding.quantity * holding.averageCost;
+  const rate = cost ? profit / cost * 100 : 0;
+  const values = holding.history.map((item) => item.price);
+  const min = Math.min(...values, holding.currentPrice);
+  const max = Math.max(...values, holding.currentPrice);
+  const spread = Math.max(max - min, Math.abs(max) * .02, .00000001);
+  const points = holding.history.map((item, index) => ({ ...item, x: holding.history.length === 1 ? 50 : index / (holding.history.length - 1) * 100, y: 88 - (item.price - min) / spread * 70 }));
+  const polygon = points.map((point) => `${point.x}% ${point.y}%`).join(', ');
+  return <div className="page finance-page holding-detail"><button className="inline-back" onClick={onBack}>‹ 返回持仓</button><section className="holding-heading"><div><span>{holding.kind === 'fund' ? '基金 / ETF' : holding.kind === 'stock' ? '股票' : holding.kind === 'meme' ? 'Meme 币' : '虚拟货币'} · {holding.quoteStatus === 'live' ? '行情已连接' : holding.quoteStatus === 'manual' ? '手动价格' : '示例行情'}</span><h2>{holding.name}</h2><p>{holding.code}{holding.contract && ` · ${holding.network} · ${holding.contract.slice(0, 8)}…${holding.contract.slice(-6)}`}</p></div><button onClick={onEdit}>更新</button></section><section className="holding-value"><span>当前市值</span><h3>{currencyMark(holding.currency)} {money(investmentValue(holding))}</h3><strong className={profit >= 0 ? 'positive' : 'negative'}>{profit >= 0 ? '+' : '−'}{currencyMark(holding.currency)}{money(Math.abs(profit))}（{rate.toFixed(2)}%）</strong><small>{holding.quantity.toLocaleString('zh-CN')} 份/枚 · 成本 {currencyMark(holding.currency)}{holding.averageCost.toLocaleString('zh-CN')} · {account?.name}</small></section><section className="return-chart-card"><header><div><span>RETURN CURVE</span><h3>单品收益曲线</h3></div><small>最近 {holding.history.length} 个价格点</small></header><div className="return-chart"><div className="return-area" style={{ clipPath: `polygon(0 100%, ${polygon}, 100% 100%)` }} />{points.map((point) => <i key={`${point.date}-${point.price}`} style={{ left: `${point.x}%`, top: `${point.y}%` }} />)}</div><footer><span>{holding.history[0]?.date ?? '—'}</span><span>{holding.history.at(-1)?.date ?? '—'}</span></footer></section><section className="holding-facts"><article><span>当前价</span><strong>{currencyMark(holding.currency)}{holding.currentPrice.toLocaleString('zh-CN')}</strong></article><article><span>总成本</span><strong>{currencyMark(holding.currency)}{money(cost)}</strong></article><article><span>最近更新</span><strong>{holding.updatedAt}</strong></article></section><p className="market-disclaimer">收益由你保存或行情服务返回的价格计算，不代表交易所结算值；合约资产请核对网络和合约地址。</p></div>;
 }
 
 function TransactionList({ items, accounts, onEdit }: { items: Transaction[]; accounts: Account[]; onEdit?: (id: string) => void }) {

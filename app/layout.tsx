@@ -1,4 +1,4 @@
 import type { Metadata } from 'next';
 import './globals.css';
-export const metadata:Metadata={title:'Self Agent｜日程管理',description:'清晰、从容的移动端日程管理。'};
+export const metadata:Metadata={title:'Self Agent｜本机优先个人管家',description:'日程、快速记录与多账户财务，先整理、确认后保存。'};
 export default function RootLayout({children}:Readonly<{children:React.ReactNode}>){return <html lang="zh-CN"><body>{children}</body></html>}

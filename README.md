@@ -1,23 +1,22 @@
 # self-agent
 
-本机优先个人管家原型：日程 + 多账户财务。
+本机优先个人管家：日程 + 多账户财务 + 待确认的支付识别 + 独立密码库。
 
-## 当前正式原型
+## 怎么用
 
-完整可跑版在 `www/`：
+底栏：首页 / 日程 / 记录 / 财务 / 我的。账户只在财务里。
 
-- `www/index.html` 页面
-- `www/styles.css` 样式
-- `www/app.js` 账本 / 日程逻辑
+- **记录**：贴支付通知原文，或点一条样例。识别结果进待确认队列，**确认后才改余额**。微信没金额就手填。
+- **密码库**：在「我的」里进入。解锁后才能看条目。模拟登录会先问「保存到 self-agent？」密码不进财务、不进导出明文。
 
-浏览器直接打开 `www/index.html` 即可。底栏：首页 / 日程 / 记录 / 财务 / 我的。账户只在财务页内。
+## 安卓正规能力
 
-仓库根目录还有一套 Sites/日程展示页（`app/page.tsx`），和完整原型不是同一份代码。
+| 能力 | 代码 | 系统授权 |
+|---|---|---|
+| 支付自动记账 | `android/.../PayNotificationService.kt` | 通知使用权 |
+| 解析 | `PayParser.kt` 与 `src/lib/pay-parser.ts` | 无 |
+| 密码收录 | `SelfAgentAutofillService.kt` | 自动填充服务 |
 
-## 上传本地文件
+详见 [docs/android-capture.md](docs/android-capture.md)。
 
-GitHub 网页：Add file → Upload files，上传三个文件到 `www/`。
-
-## 下一步
-
-自动记账与密码库见 [`docs/android-capture.md`](docs/android-capture.md)。
+网页桥：`window.onAutoTxn(json)` → 待确认 → 入账。
